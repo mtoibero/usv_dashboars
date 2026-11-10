@@ -1,0 +1,6 @@
+# Dashboard dependencies (install from the project root with
+#   python -m pip install -r dashboard/requirements.txt
+# ). The simulator's pinned dependencies are included from the root file.
+-r ../requirements.txt
+streamlit==1.66.1
+plotly==7.1.0
