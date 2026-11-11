@@ -287,9 +287,15 @@ def smc_figure_eight(
     s_r = r - r_cmd
 
     La entrada lateral Tv se deja en cero porque el bote se asume con propulsion diferencial.
+
+    Ademas de la interfaz habitual (output, required_tau, ...), el
+    controlador expone ``controller.signals(t, state)``, que devuelve un
+    diccionario con las variables internas de la ley (superficies s_u, s_r,
+    comandos u_cmd, psi_cmd, r_cmd, etc.). Lo usa dashboard02_smc; los
+    valores de control son exactamente los mismos.
     """
 
-    def compute_tau(t, state):
+    def compute_signals(t, state):
         vessel_state = np.asarray(state, dtype=float)[0:6]
         x, y, psi, u, v, r = vessel_state
         reference_time = reference_time_from_state(t, state)
@@ -388,7 +394,37 @@ def smc_figure_eight(
         tau_required = np.array([Tu, 0.0, Tr])
         tau_delivered, thruster_forces = allocate_thrusters(Tu, Tr)
 
-        return tau_required, tau_delivered, thruster_forces
+        return {
+            "tau_required": tau_required,
+            "tau_delivered": tau_delivered,
+            "thruster_forces": thruster_forces,
+            "p_s": p_s,
+            "p_s_dot": p_s_dot,
+            "p_s_ref": p_s_ref,
+            "p_s_dot_ref": p_s_dot_ref,
+            "e_p": e_p,
+            "e_v": e_v,
+            "v_cmd": v_cmd,
+            "v_cmd_dot": v_cmd_dot,
+            "speed_cmd": speed_cmd,
+            "speed_dot_cmd": speed_dot_cmd,
+            "psi_cmd": psi_cmd,
+            "psi_dot_cmd": psi_dot_cmd,
+            "e_psi": e_psi,
+            "r_cmd": r_cmd,
+            "s_u": s_u,
+            "s_r": s_r,
+            "u_dot_des": u_dot_des,
+            "r_dot_des": r_dot_des,
+        }
+
+    def compute_tau(t, state):
+        signals = compute_signals(t, state)
+        return (
+            signals["tau_required"],
+            signals["tau_delivered"],
+            signals["thruster_forces"],
+        )
 
     def controller(t, state):
         return compute_tau(t, state)[1]
@@ -403,6 +439,7 @@ def smc_figure_eight(
         return compute_tau(t, state)[2]
 
     controller.output = compute_tau
+    controller.signals = compute_signals
     controller.required_tau = required_tau
     controller.delivered_tau = delivered_tau
     controller.thruster_forces = thruster_forces
